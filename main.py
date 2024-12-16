@@ -1,1 +1,1 @@
-print("prout, skibidi toilet")
+print("prout")
