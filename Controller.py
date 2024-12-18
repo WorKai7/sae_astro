@@ -24,40 +24,50 @@ class Controller:
 
     
     def open_one(self):
-        pass
+        filename = QFileDialog.getOpenFileName(caption="Selectionnez des fichiers", directory="./images", filter="Fichiers FITS (*.fits *.fit)")[0]
+        self.modele.files_opened = [filename]
+        self.update_vue()
 
     def open_more(self):
-        pass
+        filenames = QFileDialog.getOpenFileNames(caption="Selectionnez des fichiers", directory="./images", filter="Fichiers FITS (*.fits *.fit)")[0]
+        self.modele.files_opened = filenames
+        self.update_vue()
 
     def save_as(self):
         filename = QFileDialog.getSaveFileName(caption="Enregistrer sous..", directory="./images/images_sauvegardees")[0] + ".jpg"
-        if filename:
+        if filename != '.jpg':
             self.vue.main_widget.center.fig.gca().axis("off")
             self.vue.main_widget.center.fig.savefig(filename, format="jpg", bbox_inches='tight', pad_inches=0, dpi=300)
             self.vue.main_widget.center.fig.gca().axis("on")
             self.vue.statusBar().showMessage("Image enregistrée sous le nom '" + filename + "'..", 3000)
             self.modele.current_file = filename
-
+    
     def save(self):
-        pass
+        if len(self.modele.current_file) > 0:
+            self.vue.main_widget.center.fig.gca().axis("off")
+            self.vue.main_widget.center.fig.savefig(self.modele.current_file, format="jpg", bbox_inches='tight', pad_inches=0, dpi=300)
+            self.vue.main_widget.center.fig.gca().axis("on")
+        else:
+            self.save_as()
 
     def search(self):
         pass
 
     def download(self):
         pass
-
+    
     def update_vue(self):
-        if self.modele.get_opened_files():
-            self.vue.main_widget.center.fig.gca().clear()
-            self.vue.main_widget.center.fig = self.modele.get_fig(self.modele.get_opened_files(),
-                                                                  contrast_percentile=self.vue.main_widget.right.contrast.value()/100,
-                                                                  gamma=self.vue.main_widget.right.gamma.value()/100,
-                                                                  custom_red=self.vue.main_widget.right.r.value()/100,
-                                                                  custom_green=self.vue.main_widget.right.g.value()/100,
-                                                                  custom_blue=self.vue.main_widget.right.b.value()/100)
+        if self.modele.files_opened:
+            try:
+                self.vue.main_widget.center.fig = self.modele.get_fig(self.modele.files_opened,
+                                                                    contrast_percentile=self.vue.main_widget.right.contrast.value()/100,
+                                                                    gamma=self.vue.main_widget.right.gamma.value()/100,
+                                                                    custom_red=self.vue.main_widget.right.r.value()/100,
+                                                                    custom_green=self.vue.main_widget.right.g.value()/100,
+                                                                    custom_blue=self.vue.main_widget.right.b.value()/100)
+            except TypeError:
+                self.vue.statusBar().showMessage("Erreur: trop, pas assez ou mauvaises dimensions de fichiers sélectionnés", 3000)
             
-            self.vue.main_widget.center.plot = FigureCanvas(self.vue.main_widget.center.fig)
             self.vue.main_widget.center.update()
 
 

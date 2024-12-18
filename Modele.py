@@ -3,15 +3,12 @@ from astropy.visualization import PercentileInterval
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import zoom
+from memory_profiler import profile
 
 class Modele:
     def __init__(self):
-        self.__files_opened = ["images/Tarantula/Tarantula_Nebula-halpha.fit", "images/Tarantula/Tarantula_Nebula-oiii.fit", "images/Tarantula/Tarantula_Nebula-sii.fit"]
+        self.files_opened = []
         self.current_file = ""
-
-    
-    def get_opened_files(self):
-        return self.__files_opened
         
 
     def resize(self, data, target_shape):
@@ -20,43 +17,48 @@ class Modele:
             return zoom(data, zoom_factors, order=1)
         return data
 
+    # Décorateur pour voir la mémoire dans le terminal
+    @profile
     def get_fig(self, files: list, **kwargs):
-        # Récupération des données des fichiers entrés
-        data_list = [fits.getdata(file) for file in files]
+        combined_image = None
 
-        # Récupération de la première couche si la donnée est en 3D
-        data_list = [data[0] if len(data.shape) == 3 else data for data in data_list]
+        # On traite chaque fichier 1 par 1 pour réduire l'utilisation de la mémoire à un instant T
+        for i, file in enumerate(files):
+            # Récupération de la première couche (PRIMARY)
+            data = fits.getdata(file, 0)
 
-        # Resize
-        data_list = [self.resize(data, data_list[0].shape) for data in data_list]
+            # On préremplis l'image finale de 0
+            if combined_image is None:
+                target_shape = data.shape
+                combined_image = np.zeros((*target_shape, len(files)), dtype=np.float32)
+            
+            # Resize
+            data = self.resize(data, target_shape)
 
-        # Print de la taille de chaque image pour vérif
-        for data in data_list:
-            print(data.shape)
+            # Normalisation
+            interval = PercentileInterval(kwargs.get("contrast_percentile", 99))
+            data = interval(data)
 
-        # Contraste
-        interval = PercentileInterval(kwargs.get("contrast_percentile", 99))
-        norm_list = [interval(data) for data in data_list]
+            # Couleurs custom
+            data *= kwargs.get("custom_red", 1) if i == 0 else 1
+            data *= kwargs.get("custom_green", 1) if i == 1 else 1
+            data *= kwargs.get("custom_blue", 1) if i == 2 else 1
 
-        # Couleurs custom
-        if len(files) == 3:
-            norm_list[0] *= kwargs.get("custom_red", 1)
-            norm_list[1] *= kwargs.get("custom_green", 1)
-            norm_list[2] *= kwargs.get("custom_blue", 1)
+            # Gamma
+            data = np.power(data, 1 / kwargs.get("gamma", 1))
 
-        # Gamma
-        norm_list = [np.power(norm, 1 / kwargs.get("gamma", 1)) for norm in norm_list]
+            # Mise à jour de l'image finale
+            combined_image[..., i] = data
 
-        # Combinaison
-        combined_image = np.dstack(norm_list)
+        del data
 
         # Affichage
+        fig, ax = plt.subplots()
         try:
-            fig, ax = plt.subplots()
-            ax.imshow(combined_image, cmap='gray')
+            ax.imshow(combined_image)
             return fig
         except TypeError as e:
-            print("Erreur de dimensions des images:", e)
+            raise e
 
 
 # get_fig("images/Tarantula/Tarantula_Nebula-halpha.fit", "images/Tarantula/Tarantula_Nebula-oiii.fit", "images/Tarantula/Tarantula_Nebula-sii.fit", gamma=2)

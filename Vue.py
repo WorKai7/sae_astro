@@ -1,10 +1,10 @@
 import sys
 import matplotlib
+import matplotlib.pyplot as plt
 matplotlib.use('QtAgg')
 from PyQt6.QtWidgets import QMainWindow, QApplication, QWidget, QLabel, QSlider, QHBoxLayout, QVBoxLayout, QListWidget, QAbstractItemView, QPushButton, QLineEdit, QComboBox
 from PyQt6.QtCore import Qt, pyqtSignal
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 
 class Vue(QMainWindow):
 
@@ -31,6 +31,10 @@ class Vue(QMainWindow):
         menu_file.addAction("Enregister sous", self.send_save_as)
         menu_file.addAction("Enregistrer", self.send_save)
 
+        menu_display = menu_bar.addMenu("Affichage")
+        menu_display.addAction("Activer les axes", self.enable_axis)
+        menu_display.addAction("Désactiver les axes", self.disable_axis)
+
     
     def send_open_one(self):
         self.open_one_signal.emit()
@@ -43,6 +47,14 @@ class Vue(QMainWindow):
     
     def send_save(self):
         self.save_signal.emit()
+
+    def enable_axis(self):
+        self.main_widget.center.fig.gca().axis("on")
+        self.main_widget.center.update()
+
+    def disable_axis(self):
+        self.main_widget.center.fig.gca().axis("off")
+        self.main_widget.center.update()
     
 
 
@@ -149,17 +161,19 @@ class Center(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.setFixedWidth(600)
+
         self.hlayout = QHBoxLayout() ; self.setLayout(self.hlayout)
 
-        self.fig = Figure()
+        self.fig = plt.figure()
         self.plot = FigureCanvas(self.fig)
 
         self.hlayout.addWidget(self.plot)
 
     def update(self):
+        self.plot = FigureCanvas(self.fig)
         self.hlayout.itemAt(0).widget().deleteLater()
         self.hlayout.addWidget(self.plot)
-        self.plot.draw()
         super().update()
 
 
@@ -181,7 +195,7 @@ class Right(QWidget):
         self.g = QSlider(Qt.Orientation.Horizontal)
         self.b_label = QLabel("Bleu: 100%")
         self.b = QSlider(Qt.Orientation.Horizontal)
-        self.contrast_label = QLabel("Contraste: 99%")
+        self.contrast_label = QLabel("Pourcentage d'intervale: 99%")
         self.contrast = QSlider(Qt.Orientation.Horizontal)
         self.gamma_label = QLabel("Gamma: 10%")
         self.gamma = QSlider(Qt.Orientation.Horizontal)
@@ -189,7 +203,7 @@ class Right(QWidget):
         self.r.setRange(0, 1000)
         self.g.setRange(0, 1000)
         self.b.setRange(0, 1000)
-        self.contrast.setRange(5000, 10000)
+        self.contrast.setRange(7000, 10000)
         self.gamma.setRange(0, 1000)
         self.r.setValue(100)
         self.g.setValue(100)
@@ -234,10 +248,10 @@ class Right(QWidget):
         self.b_label.setText("Bleu: " + str(val) + "%")
 
     def contrast_changed(self, val: int):
-        self.contrast_label.setText("Contraste: " + str(val/100) + "%")
+        self.contrast_label.setText("Pourcentage d'intervale: " + str(round(val/100, 2)) + "%")
 
     def gamma_changed(self, val: int):
-        self.gamma_label.setText("Gamma: " + str(val/10) + "%")
+        self.gamma_label.setText("Gamma: " + str(round(val/10, 2)) + "%")
 
 
 if __name__ == "__main__":
