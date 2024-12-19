@@ -8,12 +8,10 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 class Vue(QMainWindow):
 
-    open_one_signal = pyqtSignal()
-    open_more_signal = pyqtSignal()
-    save_as_signal = pyqtSignal()
-    save_signal = pyqtSignal()
-    downloadClicked = pyqtSignal()
-    searchClicked = pyqtSignal(str, str, str, float)
+    open_files_signal = pyqtSignal()
+    save_signal = pyqtSignal(int)
+    downloadClicked = pyqtSignal(list)
+    searchClicked = pyqtSignal(str, str, str, str, float)
 
     def __init__(self):
         super().__init__()
@@ -28,29 +26,48 @@ class Vue(QMainWindow):
         menu_bar = self.menuBar()
 
         menu_file = menu_bar.addMenu("Fichier")
-        menu_file.addAction("Ouvrir 1 fichier", self.send_open_one)
-        menu_file.addAction("Ouvrir plusieurs fichiers", self.send_open_more)
-        menu_file.addAction("Enregister sous", self.send_save_as)
-        menu_file.addAction("Enregistrer", self.send_save)
+        menu_file.addAction("Ouvrir", self.send_open_files)
+        save_menu = menu_file.addMenu("Enregister..")
+        save_menu.addAction("Haute qualité", self.high_save)
+        save_menu.addAction("Moyenne qualité", self.medium_save)
+        save_menu.addAction("Basse qualité", self.low_save)
 
         menu_display = menu_bar.addMenu("Affichage")
         menu_display.addAction("Activer les axes", self.enable_axis)
         menu_display.addAction("Désactiver les axes", self.disable_axis)
-        self.main_widget.left.file_list.download.clicked.connect(self.downloadClicked.emit)
-        #self.main_widget.left.filters.search.clicked.connect(self.searchClicked.emit(self.main_widget.left.filters.type.currentText(), self.main_widget.left.filters.telescope.currentText(), self.main_widget.left.filters.wavelength.currentText(), self.main_widget.left.filters.radius.value()))
+        self.main_widget.left.file_list.download.clicked.connect(self.send_download)
+        self.main_widget.left.filters.search.clicked.connect(self.send_search)
 
     
-    def send_open_one(self):
-        self.open_one_signal.emit()
+    def send_search(self):
+        name = self.main_widget.left.filters.name.text()
+        type = self.main_widget.left.filters.type.currentText()
+        telescope = self.main_widget.left.filters.telescope.currentText()
+        wavelength = self.main_widget.left.filters.wavelength.currentText()
+        radius = self.main_widget.left.filters.radius.value()/10
+
+        if all(param is not None and param != "Sélection.." for param in [name, type, telescope, wavelength, radius]):
+            self.searchClicked.emit(name, type, telescope, wavelength, radius)
+        else:
+            self.statusBar().showMessage("Filtres incomplets")
+
+    def send_download(self):
+        self.downloadClicked.emit(self.main_widget.left.file_list.list.selectedIndexes())
+
+    def send_open_files(self):
+        self.open_files_signal.emit()
     
-    def send_open_more(self):
-        self.open_more_signal.emit()
-    
-    def send_save_as(self):
-        self.save_as_signal.emit()
-    
-    def send_save(self):
-        self.save_signal.emit()
+    def high_save(self):
+        self.send_save(3000)
+
+    def medium_save(self):
+        self.send_save(1000)
+
+    def low_save(self):
+        self.send_save(300)
+
+    def send_save(self, quality: int):
+        self.save_signal.emit(quality)
 
     def enable_axis(self):
         self.main_widget.center.fig.gca().axis("on")
@@ -92,9 +109,6 @@ class Left(QWidget):
 
 
 class FileList(QWidget):
-
-
-
     def __init__(self):
         super().__init__()
 
@@ -105,16 +119,12 @@ class FileList(QWidget):
         self.download = QPushButton("Télécharger")
 
         self.vlayout.addWidget(self.list)
-        self.vlayout.addStretch()
         self.vlayout.addWidget(self.download)
 
 
 
 
 class Filters(QWidget):
-
-
-
     def __init__(self):
         super().__init__()
 
@@ -159,7 +169,7 @@ class Filters(QWidget):
 
 
     def change_radius(self, val:int):
-        self.radius_label.setText("Rayon:  " + str(val) + "deg")
+        self.radius_label.setText("Rayon:  " + str(val/10) + "deg")
 
 class Center(QWidget):
     def __init__(self):
@@ -199,7 +209,7 @@ class Right(QWidget):
         self.g = QSlider(Qt.Orientation.Horizontal)
         self.b_label = QLabel("Bleu: 100%")
         self.b = QSlider(Qt.Orientation.Horizontal)
-        self.contrast_label = QLabel("Pourcentage d'intervale: 99%")
+        self.contrast_label = QLabel("Plage relative: 99%")
         self.contrast = QSlider(Qt.Orientation.Horizontal)
         self.gamma_label = QLabel("Gamma: 10%")
         self.gamma = QSlider(Qt.Orientation.Horizontal)
@@ -252,7 +262,7 @@ class Right(QWidget):
         self.b_label.setText("Bleu: " + str(val) + "%")
 
     def contrast_changed(self, val: int):
-        self.contrast_label.setText("Pourcentage d'intervale: " + str(round(val/100, 2)) + "%")
+        self.contrast_label.setText("Plage relative: " + str(round(val/100, 2)) + "%")
 
     def gamma_changed(self, val: int):
         self.gamma_label.setText("Gamma: " + str(round(val/10, 2)) + "%")
