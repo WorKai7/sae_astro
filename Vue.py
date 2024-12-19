@@ -12,6 +12,8 @@ class Vue(QMainWindow):
     open_more_signal = pyqtSignal()
     save_as_signal = pyqtSignal()
     save_signal = pyqtSignal()
+    downloadClicked = pyqtSignal()
+    searchClicked = pyqtSignal(str, str, str, float)
 
     def __init__(self):
         super().__init__()
@@ -34,6 +36,8 @@ class Vue(QMainWindow):
         menu_display = menu_bar.addMenu("Affichage")
         menu_display.addAction("Activer les axes", self.enable_axis)
         menu_display.addAction("Désactiver les axes", self.disable_axis)
+        self.main_widget.left.file_list.download.clicked.connect(self.downloadClicked.emit)
+        #self.main_widget.left.filters.search.clicked.connect(self.searchClicked.emit(self.main_widget.left.filters.type.currentText(), self.main_widget.left.filters.telescope.currentText(), self.main_widget.left.filters.wavelength.currentText(), self.main_widget.left.filters.radius.value()))
 
     
     def send_open_one(self):
@@ -89,7 +93,7 @@ class Left(QWidget):
 
 class FileList(QWidget):
 
-    downloadClicked = pyqtSignal()
+
 
     def __init__(self):
         super().__init__()
@@ -104,12 +108,12 @@ class FileList(QWidget):
         self.vlayout.addStretch()
         self.vlayout.addWidget(self.download)
 
-        self.download.clicked.connect(self.downloadClicked.emit)
+
 
 
 class Filters(QWidget):
 
-    searchClicked = pyqtSignal()
+
 
     def __init__(self):
         super().__init__()
@@ -152,7 +156,7 @@ class Filters(QWidget):
 
 
         self.radius.valueChanged.connect(self.change_radius)
-        self.search.clicked.connect(self.searchClicked.emit)
+
 
     def change_radius(self, val:int):
         self.radius_label.setText("Rayon:  " + str(val) + "deg")

@@ -2,9 +2,13 @@ import sys
 from PyQt6.QtWidgets import QApplication, QFileDialog
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from Vue import Vue
+from PyQt6.QtCore import Qt, pyqtSignal
 from Modele import Modele
 
 class Controller:
+
+    return_search_signal = pyqtSignal(list)
+
     def __init__(self):
         
         self.vue = Vue()
@@ -50,11 +54,12 @@ class Controller:
         else:
             self.save_as()
 
-    def search(self):
-        pass
+    def search(self, type:str, telescope:str, wavelength:str, radius:float):
+        self.products = self.modele.search(type, telescope, wavelength, radius)
+        self.return_search_signal.emit(self.products)
 
-    def download(self):
-        pass
+    def download(self, product):
+        self.modele.download(product)
     
     def update_vue(self):
         if self.modele.files_opened:
